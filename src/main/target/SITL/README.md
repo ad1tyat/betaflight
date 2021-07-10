@@ -1,6 +1,6 @@
 ## SITL in Gazebo 9 with ArduCopterPlugin (running from docker)
 SITL (software in the loop) simulator allows you to run betaflight (at least this branch) without any hardware.
-Currently only tested on Ubuntu 18.04.5 LTS based on the docker image nvidia/cudagl:11.2.2-devel-ubuntu18.04. On top of this image, it was installed ROS Melodic Gazebo 9 and [this ArduCopter Plugin](https://github.com/SwiftGust/ardupilot_gazebo.git).
+Currently only tested on Ubuntu 18.04.5 LTS based on the docker image nvidia/cudagl:11.2.2-devel-ubuntu18.04. On top of this image, it was installed ROS Melodic Gazebo 9 and [this ArduCopter Plugin](https://github.com/SwiftGust/ardupilot_gazebo.git). You can find the image on [dockerhub](https://hub.docker.com/r/ricardodeazambuja/gazebo9_cudagl_sitl).
 
 ### Gazebo speed / precision
 Open the file `/home/sitl_user/ardupilot_gazebo/iris_arducopter_demo.world` and change `real_time_update_rate` to a value that fits your system.  
