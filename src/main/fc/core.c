@@ -317,7 +317,9 @@ void updateArmingStatus(void)
         }
 
         if (!isUpright() && !IS_RC_MODE_ACTIVE(BOXFLIPOVERAFTERCRASH)) {
+#if !defined(SITL_DEBUG)
             setArmingDisabled(ARMING_DISABLED_ANGLE);
+#endif
         } else {
             unsetArmingDisabled(ARMING_DISABLED_ANGLE);
         }
@@ -381,7 +383,9 @@ void updateArmingStatus(void)
 
 #ifdef USE_ACC
         if (accNeedsCalibration()) {
+#if !defined(SITL_DEBUG)
             setArmingDisabled(ARMING_DISABLED_ACC_CALIBRATION);
+#endif
         } else {
             unsetArmingDisabled(ARMING_DISABLED_ACC_CALIBRATION);
         }

@@ -26,6 +26,10 @@
 #include "fc/runtime_config.h"
 #include "io/beeper.h"
 
+#if defined(SITL_DEBUG)
+    #include <stdio.h>
+#endif
+
 uint8_t armingFlags = 0;
 uint8_t stateFlags = 0;
 uint16_t flightModeFlags = 0;
@@ -76,6 +80,12 @@ void unsetArmingDisabled(armingDisableFlags_e flag)
 
 bool isArmingDisabled(void)
 {
+#if defined(SITL_DEBUG)
+    printf("armingDisableFlags: \n");
+    for(int i=0;i<26;i++){
+        printf("%s = %d\n", armingDisableFlagNames[i], 1 && (armingDisableFlags >> i));
+    }
+#endif
     return armingDisableFlags;
 }
 

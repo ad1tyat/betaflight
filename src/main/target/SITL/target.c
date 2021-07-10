@@ -80,7 +80,12 @@ int lockMainPID(void) {
 #define ACC_SCALE (256 / 9.80665)
 #define GYRO_SCALE (16.4)
 void sendMotorUpdate() {
-    udpSend(&pwmLink, &pwmPkt, sizeof(servo_packet));
+    uint8_t n;
+    n = udpSend(&pwmLink, &pwmPkt, sizeof(servo_packet));
+#if defined(SITL_DEBUG)    
+    printf("Sent %d bytes!\n", n);
+    printf("Motor PWM values: [%f, %f, %f, %f]\n", pwmPkt.motor_speed[0], pwmPkt.motor_speed[1], pwmPkt.motor_speed[2], pwmPkt.motor_speed[3]);
+#endif
 }
 void updateState(const fdm_packet* pkt) {
     static double last_timestamp = 0; // in seconds
@@ -95,6 +100,9 @@ void updateState(const fdm_packet* pkt) {
         last_timestamp = pkt->timestamp;
         last_realtime = realtime_now;
         sendMotorUpdate();
+#if defined(SITL_DEBUG)
+        printf("MotorUpdate sent!\n");
+#endif
         return;
     }
 
@@ -159,7 +167,9 @@ void updateState(const fdm_packet* pkt) {
         timeval_sub(&out_ts, &now_ts, &last_ts);
         simRate = deltaSim / (out_ts.tv_sec + 1e-9*out_ts.tv_nsec);
     }
-//    printf("simRate = %lf, millis64 = %lu, millis64_real = %lu, deltaSim = %lf\n", simRate, millis64(), millis64_real(), deltaSim*1e6);
+#if defined(SITL_DEBUG)
+    printf("simRate = %lf, millis64 = %lu, millis64_real = %lu, deltaSim = %lf\n", simRate, millis64(), millis64_real(), deltaSim*1e6);
+#endif
 
     last_timestamp = pkt->timestamp;
     last_realtime = micros64_real();
@@ -181,9 +191,16 @@ static void* udpThread(void* data) {
     while (workerRunning) {
         n = udpRecv(&stateLink, &fdmPkt, sizeof(fdm_packet), 100);
         if (n == sizeof(fdm_packet)) {
-//            printf("[data]new fdm %d\n", n);
+#if defined(SITL_DEBUG)
+            printf("[data]new fdm %d\n", n);
+#endif
             updateState(&fdmPkt);
+        } 
+#if defined(SITL_DEBUG)
+        else {
+            printf("Received wrong state packet size %d instead of %d!\n", n, (int)sizeof(fdm_packet));
         }
+#endif
     }
 
     printf("udpThread end!!\n");
@@ -194,8 +211,8 @@ static void* tcpThread(void* data) {
     UNUSED(data);
 
     dyad_init();
-    dyad_setTickInterval(0.2f);
-    dyad_setUpdateTimeout(0.5f);
+    dyad_setTickInterval(SITL_TICK_INTERVAL);
+    dyad_setUpdateTimeout((SITL_UPDATE_TIMEOUT));
 
     while (workerRunning) {
         dyad_update();
@@ -231,10 +248,10 @@ void systemInit(void) {
         exit(1);
     }
 
-    ret = udpInit(&pwmLink, "127.0.0.1", 9002, false);
+    ret = udpInit(&pwmLink, SIM_PWM_IP, SIM_PWM_PORT, false);
     printf("init PwmOut UDP link...%d\n", ret);
 
-    ret = udpInit(&stateLink, NULL, 9003, true);
+    ret = udpInit(&stateLink, SIM_STATE_IP, SIM_STATE_PORT, true);
     printf("start UDP server...%d\n", ret);
 
     ret = pthread_create(&udpWorker, NULL, udpThread, NULL);
@@ -458,10 +475,12 @@ static void pwmCompleteMotorUpdate(void)
     pwmPkt.motor_speed[1] = motorsPwm[2] / outScale;
     pwmPkt.motor_speed[2] = motorsPwm[3] / outScale;
 
-    // get one "fdm_packet" can only send one "servo_packet"!!
+    // it needs to get one "fdm_packet" to send one "servo_packet"!!
     if (pthread_mutex_trylock(&updateLock) != 0) return;
     udpSend(&pwmLink, &pwmPkt, sizeof(servo_packet));
-//    printf("[pwm]%u:%u,%u,%u,%u\n", idlePulse, motorsPwm[0], motorsPwm[1], motorsPwm[2], motorsPwm[3]);
+#if defined(SITL_DEBUG)
+    printf("[pwm]%u:%u,%u,%u,%u\n", idlePulse, motorsPwm[0], motorsPwm[1], motorsPwm[2], motorsPwm[3]);
+#endif
 }
 
 void pwmWriteServo(uint8_t index, float value) {

@@ -142,7 +142,15 @@
 
 #define DEFIO_NO_PORTS   // suppress 'no pins defined' warning
 
-// belows are internal stuff
+#define SIM_PWM_PORT 9002 // sim is the server
+#define SIM_PWM_IP "127.0.0.1"
+#define SIM_STATE_PORT 9003 // firmware is the server
+#define SIM_STATE_IP NULL // using NULL the socket will be bound to all local interfaces
+#define SITL_UPDATE_TIMEOUT 0.01f
+#define SITL_TICK_INTERVAL 0.01f
+#define SITL_DEBUG
+
+// below are internal stuff
 
 extern uint32_t SystemCoreClock;
 

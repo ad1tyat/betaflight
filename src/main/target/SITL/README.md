@@ -1,47 +1,55 @@
-## SITL in gazebo 8 with ArduCopterPlugin
-SITL (software in the loop) simulator allows you to run betaflight/cleanflight without any hardware.
-Currently only tested on Ubuntu 16.04, x86_64, gcc (Ubuntu 5.4.0-6ubuntu1~16.04.4) 5.4.0 20160609.
+## SITL in Gazebo 9 with ArduCopterPlugin (running from docker)
+SITL (software in the loop) simulator allows you to run betaflight (at least this branch) without any hardware.
+Currently only tested on Ubuntu 18.04.5 LTS based on the docker image nvidia/cudagl:11.2.2-devel-ubuntu18.04. On top of this image, it was installed ROS Melodic Gazebo 9 and [this ArduCopter Plugin](https://github.com/SwiftGust/ardupilot_gazebo.git).
 
-### install gazebo 8
-see here: [Installation](http://gazebosim.org/tutorials?cat=install)
+### Gazebo speed / precision
+Open the file `/home/sitl_user/ardupilot_gazebo/iris_arducopter_demo.world` and change `real_time_update_rate` to a value that fits your system.  
+Currently it's:  `<real_time_update_rate>400</real_time_update_rate>`
+See more details [here](http://gazebosim.org/tutorials?tut=modifying_world&cat=build_world#PhysicsProperties) for detail.
+`max_step_size` should NOT higher than `0.0025` as I tested. A smaller value means a more accurate simulation in the expense of higher CPU load.
 
-### copy & modify world
-for Ubunutu 16.04:
-`cp /usr/share/gazebo-8/worlds/iris_arducopter_demo.world .`
 
-change `real_time_update_rate` in `iris_arducopter_demo.world`:
-`<real_time_update_rate>0</real_time_update_rate>`
-to
-`<real_time_update_rate>100</real_time_update_rate>`
-***this suggest set to non-zero***
+### Build betaflight
+Before building your own version, you can change some parameters inside `src/main/target/SITL/target.h` (E.g. `SITL_UPDATE_TIMEOUT` or `SITL_TICK_INTERVAL`).  
+From the based of this repository, just run `compile_sitl.sh`.
 
-`100` mean what speed your computer should run in (Hz).
-Faster computer can set to a higher rate.
-see [here](http://gazebosim.org/tutorials?tut=modifying_world&cat=build_world#PhysicsProperties) for detail.
-`max_step_size` should NOT higher than `0.0025` as I tested.
-smaller mean more accurate, but need higher speed CPU to run as realtime.
+### Settings
+This branch already an executable file (`betaflight_SITL.elf`) with the configuration (`eeprom.bin`) inside `obj/main`, but you can still modify it using [betaflight-configurator](https://github.com/betaflight/betaflight-configurator/releases).
 
-### build betaflight
-run `make TARGET=SITL`
+In `Configuration` tab:
+1. `ESC/Motor`: `PWM`, **enable** `Motor PWM speed Separated from PID speed`.
+2. `PID loop frequency` as high as it can (8kHz?).
+3. Put a new name on `Craft name` to check confirm the settings were saved.
+4. Click `Save and Reboot`.
 
-### settings
-to avoid simulation speed slow down, suggest to set some settings belows:
+In `Modes` tab:
+1. Add `ARM` on `AUX1` from 1750 to 2100.
+2. Add `ANGLE` on `AUX2` from 900 to 1200.  
+3. Click `Save`.
 
-In `configuration` page:
+**Don't click on the `Video Transmitter` tab...**
 
-1. `ESC/Motor`: `PWM`, disable `Motor PWM speed Sparted from PID speed`
-2. `PID loop frequency` as high as it can.
+In `Blackbox` tab:  
+1. Set `Blackbox logging device` to `No logging`.  
+2. Click `Save and Reboot`.
+
+You can use the `Motors` tab to check if betaflight is communicating with the simulator.
 
 ### start and run
-1. start betaflight: `./obj/main/betaflight_SITL.elf`
+1. start docker: `run_docker_sim.sh`
 2. start gazebo: `gazebo --verbose ./iris_arducopter_demo.world`
-4. connect your transmitter and fly/test, I used a app to send `MSP_SET_RAW_RC`, code available [here](https://github.com/cs8425/msp-controller).
+3. start betaflight: `./obj/main/betaflight_SITL.elf`
+3. connect to `tcp://127.0.0.1:5761` using [YAMSPy](https://github.com/thecognifly/YAMSPy) and fly/test.
 
 ### note
 betaflight	->	gazebo	`udp://127.0.0.1:9002`
 gazebo	->	betaflight	`udp://127.0.0.1:9003`
 
-UARTx will bind on `tcp://127.0.0.1:576x` when port been open.
+You can test the system using [netcat](https://www.digitalocean.com/community/tutorials/how-to-use-netcat-to-establish-and-test-tcp-and-udp-connections):  
+1. Create a UDP server listening on port 9003: `nc -u -k -l -p 9003`
+2. Connect to port 9002: `nc -u 127.0.0.1 9002`
+
+UART1 will bind on `tcp://127.0.0.1:5761`.
 
 `eeprom.bin`, size 8192 Byte, is for config saving.
 size can be changed in `src/main/target/SITL/pg.ld` >> `__FLASH_CONFIG_Size`
